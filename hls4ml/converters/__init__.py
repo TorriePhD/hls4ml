@@ -192,6 +192,7 @@ def convert_from_keras_model(
     output_data_tb=None,
     backend='Vivado',
     hls_config=None,
+    prune_iter=0,
     **kwargs,
 ):
     """Convert to hls4ml model based on the provided configuration.
@@ -242,7 +243,7 @@ def convert_from_keras_model(
 
     _check_hls_config(config, hls_config)
 
-    return keras_to_hls(config)
+    return keras_to_hls(config,prune_iter)
 
 
 def convert_from_pytorch_model(

@@ -326,7 +326,7 @@ class ModelGraph:
         outputs (list, optional):  The outputs to the model. If None, determined from layer_list
     """
 
-    def __init__(self, config, data_reader, layer_list, inputs=None, outputs=None):
+    def __init__(self, config, data_reader, layer_list, inputs=None, outputs=None,prune_iter=0):
         self.config = HLSConfig(config)
         self.reader = data_reader
 
@@ -352,7 +352,7 @@ class ModelGraph:
 
         self._top_function_lib = None
 
-        self._make_graph(layer_list)
+        self._make_graph(layer_list,prune_iter)
 
         for flow in self.config.flows:
             self.apply_flow(flow)
@@ -364,7 +364,7 @@ class ModelGraph:
         all_node_output_names = [node['outputs'] if 'outputs' in node else [node['name']] for node in inout_nodes]
         return [output for node_output_names in all_node_output_names for output in node_output_names]  # to flatten
 
-    def _make_graph(self, layer_list):
+    def _make_graph(self, layer_list,prune_iter):
         for layer in layer_list:
             kind = layer['class_name']
             name = layer['name']
@@ -377,7 +377,7 @@ class ModelGraph:
             if len(outputs) == 0:
                 outputs = [name]
 
-            self.graph[name] = self.make_node(kind, name, layer, inputs, outputs)
+            self.graph[name] = self.make_node(kind, name, layer, inputs, outputs,prune_iter)
 
     def apply_flow(self, flow, reapply='single'):
         """Applies a flow (a collection of optimizers).
@@ -430,7 +430,7 @@ class ModelGraph:
             applied_passes = set()
         applied_flows[flow.name] = applied_passes
 
-    def make_node(self, kind, name, attributes, inputs, outputs=None):
+    def make_node(self, kind, name, attributes, inputs, outputs=None,prune_iter=0):
         """Make a new node not connected to the model graph.
 
         The 'kind' should be a valid layer registered with `register_layer`. If no outputs
@@ -464,7 +464,7 @@ class ModelGraph:
 
         if self.config.backend is not None:
             layer_cls = self.config.backend.create_layer_class(layer_cls)
-        node = layer_cls(self, name, attributes, inputs, outputs)
+        node = layer_cls(self, name, attributes, inputs, outputs,prune_iter)
         for o in node.outputs:
             out_var = node.get_output_variable(output_name=o)
             if o in self.outputs:
@@ -590,8 +590,8 @@ class ModelGraph:
         node_inputs = [inp for node in self.graph.values() for inp in node.inputs]
         self.outputs = [out for out in node_outputs if out not in node_inputs]
 
-    def get_weights_data(self, layer_name, var_name):
-        return self.reader.get_weights_data(layer_name, var_name)
+    def get_weights_data(self, layer_name, var_name,prune_iter):
+        return self.reader.get_weights_data(layer_name, var_name,prune_iter)
 
     def next_layer(self):
         self.index += 1

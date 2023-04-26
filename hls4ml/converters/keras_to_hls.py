@@ -3,6 +3,8 @@ import json
 import h5py
 
 from hls4ml.model import ModelGraph
+import numpy as np
+import random
 
 MAXMULT = 4096
 
@@ -32,10 +34,27 @@ class KerasFileReader:
         else:
             return None
 
-    def get_weights_data(self, layer_name, var_name):
-        data = self._find_data(layer_name, var_name)
-        if data:
-            return data[()]
+    def get_weights_data(self, layer_name, var_name,prune_iter):
+        data = self._find_data(layer_name, var_name) 
+        data1 = []
+        prune_change = .8
+        prune_percent = 1
+        for i in range(prune_iter):
+            prune_percent *=prune_change
+        if data is not None:
+            for i in range(len(data)):
+                if isinstance(data[i], np.ndarray):
+                    dataLayer = np.zeros_like(data[i])
+                    indexes_to_use = np.random.choice(len(data[i]), size=max(int(dataLayer.shape[0]*prune_percent),1), replace=False)
+                    
+                    for j in range(len(data[i])):
+                        if j in indexes_to_use:
+                            dataLayer[j]= data[i][j]
+                    data1.append(dataLayer)
+                else:
+                    data1.append(data[i])
+        if data1:
+            return np.array(data1)
         else:
             return None
 
@@ -51,7 +70,7 @@ class KerasModelReader:
     def __init__(self, keras_model):
         self.model = keras_model
 
-    def get_weights_data(self, layer_name, var_name):
+    def get_weights_data(self, layer_name, var_name,prune_iter):
         layer = self.model.get_layer(layer_name)
         for i, w in enumerate(layer.weights):
             if var_name in w.name:
@@ -307,9 +326,9 @@ def parse_keras_model(model_arch, reader):
     return layer_list, input_layers, output_layers
 
 
-def keras_to_hls(config):
+def keras_to_hls(config,prune_iter):
     model_arch, reader = get_model_arch(config)
     layer_list, input_layers, output_layers = parse_keras_model(model_arch, reader)
     print('Creating HLS model')
-    hls_model = ModelGraph(config, reader, layer_list, input_layers, output_layers)
+    hls_model = ModelGraph(config, reader, layer_list, input_layers, output_layers,prune_iter)
     return hls_model

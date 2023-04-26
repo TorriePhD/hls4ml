@@ -70,7 +70,7 @@ It looks like this:
    OutputPredictions: keras/KERAS_3layer_predictions.dat
 
    # Backend section (Vivado backend)
-   Part: xcku115-flvb2104-2-i
+   Part: XC7Z020-1CLG400C
    ClockPeriod: 5
    IOType: io_parallel # options: io_parallel/io_stream
 
